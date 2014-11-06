@@ -1,6 +1,6 @@
 {
     "name": "contao-components/respimage",
-    "type": "component",
+    "type": "contao-component",
     "description": "Respimage.js integration for Contao Open Source CMS",
     "license": "MIT",
     "authors": [
@@ -10,13 +10,6 @@
         }
     ],
     "require": {
-        "robloach/component-installer": "~0.0"
-    },
-    "extra": {
-        "component": {
-            "scripts": [
-                "js/respimage.min.js"
-            ]
-        }
+        "contao-components/installer": "~1.0"
     }
 }
