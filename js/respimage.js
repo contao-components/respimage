@@ -1,4 +1,4 @@
-/*! respimage - v1.1.3 - 2014-11-06
+/*! respimage - v1.1.4 - 2014-11-19
  Licensed MIT */
 !function(window, document, undefined) {
     "use strict";
@@ -6,13 +6,15 @@
         return str.trim ? str.trim() : str.replace(/^\s+|\s+$/g, "");
     }
     function updateMetrics() {
+        var dprM;
         (isVwDirty || DPR != window.devicePixelRatio) && (isVwDirty = !1, DPR = window.devicePixelRatio, 
-        cssCache = {}, sizeLengthCache = {}, cfg.uT || (ri.DPR = Math.min(DPR || 1, 3), 
-        ri.DPR > 2.5 && (ri.DPR /= 1.12)), dprM = ri.DPR * cfg.xQuant, tLow = cfg.tLow * dprM, 
-        greed = cfg.greed * dprM, tHigh = cfg.tHigh, tMemory = 2 + dprM, units.width = window.innerWidth || docElem.offsetWidth, 
-        units.height = window.innerHeight || docElem.offsetHeight, units.orienation = units[units.width > units.height ? "landscape" : "portrait"], 
-        units.resolution = dprM, units.vw = units.width / 100, units.vh = units.height / 100, 
-        units.em = ri.getEmValue(), units.rem = units.em);
+        cssCache = {}, sizeLengthCache = {}, cfg.uT || (ri.DPR = (DPR || 1) * cfg.xQuant, 
+        dprM = Math.min(ri.DPR, 3), dprM > 1.4 && (ri.DPR = Math.round(dprM / (1 + (dprM - 1.4) / 12) * 100) / 100)), 
+        dprM = ri.DPR, units.resolution = dprM, tLow = cfg.tLow * dprM, greed = cfg.greed / 2, 
+        greed += greed * dprM, tHigh = cfg.tHigh, tMemory = 2 + dprM, units.width = window.innerWidth || docElem.offsetWidth, 
+        units.height = window.innerHeight || docElem.offsetHeight, units.orientation = units[units.width > units.height ? "landscape" : "portrait"], 
+        units.vw = units.width / 100, units.vh = units.height / 100, units.em = ri.getEmValue(), 
+        units.rem = units.em);
     }
     function parseDescriptor(descriptor) {
         if (!(descriptor in memDescriptor)) {
@@ -27,7 +29,9 @@
         return memDescriptor[descriptor];
     }
     function chooseLowRes(lowRes, diff, dpr) {
-        return lowRes += diff * greed, diff > tHigh && (lowRes += tLow), lowRes > dpr;
+        var add = diff * greed * lowRes;
+        return units.orientation == units.portrait && (add /= 1.4), lowRes += add, diff > tHigh && (lowRes += tLow), 
+        lowRes > dpr;
     }
     function inView(el) {
         if (!el.getBoundingClientRect) return !0;
@@ -46,7 +50,7 @@
         var candidate;
         return !set && src && (set = img[ri.ns].sets, set = set && set[set.length - 1]), 
         candidate = getCandidateForSrc(src, set), candidate && (src = ri.makeUrl(src), img[ri.ns].curSrc = src, 
-        img[ri.ns].curCan = candidate, currentSrcSupported || (img.currentSrc = src), candidate.res || setResolution(candidate, candidate.set.sizes)), 
+        img[ri.ns].curCan = candidate, candidate.res || setResolution(candidate, candidate.set.sizes)), 
         candidate;
     }
     function getCandidateForSrc(src, set) {
@@ -88,14 +92,14 @@
         candidate;
     }
     document.createElement("picture");
-    var currentSrcSupported, curSrcProp, ri = {}, noop = function() {}, image = document.createElement("img"), getImgAttr = image.getAttribute, setImgAttr = image.setAttribute, removeImgAttr = image.removeAttribute, docElem = document.documentElement, types = {}, cfg = {
+    var ri = {}, noop = function() {}, image = document.createElement("img"), getImgAttr = image.getAttribute, setImgAttr = image.setAttribute, removeImgAttr = image.removeAttribute, docElem = document.documentElement, types = {}, cfg = {
         xQuant: 1,
         tLow: .1,
-        tHigh: .5,
-        tLazy: .3,
-        greed: .33
-    }, srcAttr = "data-risrc", srcsetAttr = srcAttr + "set", supportAbort = /rident/.test(navigator.userAgent);
-    ri.ns = ("ri" + new Date().getTime()).substr(0, 9), curSrcProp = "currentSrc", (currentSrcSupported = curSrcProp in image) || (curSrcProp = "src"), 
+        tHigh: .6,
+        tLazy: .33,
+        greed: .5
+    }, srcAttr = "data-risrc", srcsetAttr = srcAttr + "set", supportAbort = /rident/.test(navigator.userAgent), curSrcProp = "currentSrc";
+    ri.ns = ("ri" + new Date().getTime()).substr(0, 9), curSrcProp in image || (curSrcProp = "src"), 
     ri.supSrcset = "srcset" in image, ri.supSizes = "sizes" in image, ri.selShort = "picture>img,img[srcset]", 
     ri.sel = ri.selShort, ri.cfg = cfg, ri.supSrcset && (ri.sel += ",img[" + srcsetAttr + "]");
     var anchor = document.createElement("a");
@@ -105,11 +109,9 @@
         return context.querySelectorAll(sel);
     };
     {
-        var on = (window.console && console.warn ? function(message) {
-            console.warn(message);
-        } : noop, function(obj, evt, fn, capture) {
+        var on = function(obj, evt, fn, capture) {
             obj.addEventListener ? obj.addEventListener(evt, fn, capture || !1) : obj.attachEvent && obj.attachEvent("on" + evt, fn);
-        }), off = function(obj, evt, fn, capture) {
+        }, off = function(obj, evt, fn, capture) {
             obj.removeEventListener ? obj.removeEventListener(evt, fn, capture || !1) : obj.detachEvent && obj.detachEvent("on" + evt, fn);
         };
         "https:" == location.protocol;
@@ -119,7 +121,7 @@
             return !media || matchMedia(media).matches;
         } : ri.mMQ, ri.matchesMedia.apply(this, arguments);
     };
-    var dprM, tLow, greed, tHigh, tMemory, isWinComplete, isVwDirty = !0, cssCache = {}, sizeLengthCache = {}, DPR = window.devicePixelRatio, units = {
+    var tLow, greed, tHigh, tMemory, isWinComplete, isVwDirty = !0, cssCache = {}, sizeLengthCache = {}, DPR = window.devicePixelRatio, units = {
         px: 1,
         portrait: 2,
         landscape: 1,
@@ -208,25 +210,21 @@
         if (candidates.length) {
             var candidate, dpr, i, j, diff, length, bestCandidate, curSrc, curCan, isSameSet, candidateSrc, oldRes, imageData = img[ri.ns], evaled = !0;
             if (curSrc = imageData.curSrc || img[curSrcProp], curCan = imageData.curCan || setSrcToCur(img, curSrc, candidates[0].set), 
-            dpr = ri.getX(candidates, curCan), curSrc && (curCan && curCan.res < dpr && (oldRes = curCan.res, 
-            curCan.res += cfg.tLazy * Math.pow(curCan.res - .2, 2)), isSameSet = !imageData.pic || curCan && curCan.set == candidates[0].set, 
-            curCan && isSameSet && curCan.res >= dpr && (oldRes || tMemory > curCan.res) ? bestCandidate = curCan : supportAbort || img.complete || !getImgAttr.call(img, "src") || img.lazyload || (isSameSet || !inView(img)) && (bestCandidate = curCan, 
+            dpr = ri.DPR, curSrc && (curCan && curCan.res < dpr && (oldRes = curCan.res, curCan.res += cfg.tLazy * Math.pow(curCan.res - .1, units.orientation == units.portrait ? 1.9 : 2.2)), 
+            isSameSet = !imageData.pic || curCan && curCan.set == candidates[0].set, curCan && isSameSet && curCan.res >= dpr && (oldRes || tMemory > curCan.res) ? bestCandidate = curCan : supportAbort || img.complete || !getImgAttr.call(img, "src") || img.lazyload || (isSameSet || !inView(img)) && (bestCandidate = curCan, 
             candidateSrc = curSrc, evaled = "L", isWinComplete && reevaluateAfterLoad(img))), 
-            !bestCandidate) for (candidates.sort(ascendingSort), length = candidates.length, 
-            bestCandidate = candidates[length - 1], i = 0; length > i; i++) if (candidate = candidates[i], 
-            candidate.res >= dpr) {
+            !bestCandidate) for (oldRes && (curCan.res = curCan.res - (curCan.res - oldRes) / 2), 
+            candidates.sort(ascendingSort), length = candidates.length, bestCandidate = candidates[length - 1], 
+            i = 0; length > i; i++) if (candidate = candidates[i], candidate.res >= dpr) {
                 j = i - 1, bestCandidate = candidates[j] && (diff = candidate.res - dpr) && curSrc != ri.makeUrl(candidate.url) && chooseLowRes(candidates[j].res, diff, dpr) ? candidates[j] : candidate;
                 break;
             }
             return oldRes && (curCan.res = oldRes), bestCandidate && (candidateSrc = ri.makeUrl(bestCandidate.url), 
-            currentSrcSupported || (img.currentSrc = candidateSrc), imageData.curSrc = candidateSrc, 
-            imageData.curCan = bestCandidate, candidateSrc != curSrc ? ri.setSrc(img, bestCandidate) : ri.setSize(img)), 
+            imageData.curSrc = candidateSrc, imageData.curCan = bestCandidate, candidateSrc != curSrc ? ri.setSrc(img, bestCandidate) : ri.setSize(img)), 
             evaled;
         }
     };
-    ri.getX = function() {
-        return ri.DPR * cfg.xQuant;
-    }, ri.setSrc = function(img, bestCandidate) {
+    ri.setSrc = function(img, bestCandidate) {
         var origWidth;
         img.src = bestCandidate.url, "image/svg+xml" == bestCandidate.set.type && (origWidth = img.style.width, 
         img.style.width = img.offsetWidth + 1 + "px", img.offsetWidth + 1 && (img.style.width = origWidth)), 
@@ -256,7 +254,8 @@
             sizes: null
         }), imageData.curCan = null, imageData.supported = !(hasPicture || fallbackCandidate && !ri.supSrcset || isWDescripor), 
         srcsetParsed && ri.supSrcset && !imageData.supported && (srcsetAttribute ? (setImgAttr.call(element, srcsetAttr, srcsetAttribute), 
-        element.srcset = "") : removeImgAttr.call(element, srcsetAttr)), imageData.parsed = !0;
+        element.srcset = "") : removeImgAttr.call(element, srcsetAttr)), imageData.supported && !imageData.srcset && (!imageData.src && element.src || element.src != ri.makeUrl(imageData.src)) && (null == imageData.src ? element.removeAttribute("src") : element.src = imageData.src), 
+        imageData.parsed = !0;
     };
     var reevaluateAfterLoad = function() {
         var onload = function() {
@@ -297,7 +296,7 @@
         lDelay = supportAbort ? 180 : 400;
         var run = function() {
             var readyState = document.readyState || "";
-            clearTimeout(timerId), timerId = setTimeout(run, "loading" == readyState ? lDelay : 4e3), 
+            clearTimeout(timerId), timerId = setTimeout(run, "loading" == readyState ? lDelay : 2e3), 
             document.body && (/d$|^c/.test(readyState) && (isWinComplete = !0, clearTimeout(timerId), 
             off(document, "readystatechange", run)), ri.fillImgs());
         }, resizeEval = function() {
